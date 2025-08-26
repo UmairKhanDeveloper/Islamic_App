@@ -14,6 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.rememberNavController
+import com.example.islamicapp.screen.LanguageScreen
+import com.example.islamicapp.screen.NavEntry
 import com.example.islamicapp.screen.Navigation
 import com.example.islamicapp.ui.theme.IslamicAppTheme
 
@@ -23,8 +25,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             IslamicAppTheme {
-                val navController = rememberNavController()
-                Navigation(navController)
+                NavEntry()
             }
         }
     }
