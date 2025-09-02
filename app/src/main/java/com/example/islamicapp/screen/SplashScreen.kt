@@ -37,7 +37,7 @@ fun SplashScreen(navController: NavHostController) {
             )
         )
 
-        delay(500) // optional delay
+        delay(500)
 
         if (isOnBoardingCompleted) {
             navController.navigate(Screens.QuranScreen.route) {

@@ -23,39 +23,62 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.example.islamicapp.R
+import kotlinx.serialization.Serializable
+
+
+
+@Serializable
+data class X1(
+    val content: String? = "",
+    val id: Double? = null,
+    val translation_eng: String? = "",
+    val transliteration: String? = ""
+)
+
+@Serializable
+data class Quran1(
+    val id: Int,
+    val surah_name: String,
+    val surah_name_ar: String,
+    val translation: String,
+    val type: String,
+    val total_verses: Int,
+    val description: String,
+    val verses: List<String>
+)
 
 @Composable
 fun Navigation(navController: NavHostController) {
     NavHost(navController = navController, startDestination = Screens.SplashScreen.route) {
-        composable(Screens.SplashScreen.route) {
-            SplashScreen(navController)
-        }
-        composable(Screens.OnBoardingScreen.route) {
-            OnBoardingScreen(navController)
-        }
-        composable(Screens.QuranScreen.route) {
-            QuranScreen(navController)
-        }
-        composable(Screens.HadethScreen.route) {
-            HadethScreen(navController)
-        }
-        composable(Screens.SebhaScreen.route) {
-            SebhaScreen(navController)
-        }
-        composable(Screens.RadioScreen.route) {
-            RadioScreen(navController)
-        }
-        composable(Screens.TimeScreen.route) {
-            TimeScreen(navController)
-        }
-        composable(Screens.LanguageScreen.route) {
-            LanguageScreen(navController)
-        }
 
+        composable(Screens.SplashScreen.route) { SplashScreen(navController) }
+        composable(Screens.OnBoardingScreen.route) { OnBoardingScreen(navController) }
+        composable(Screens.QuranScreen.route) { QuranScreen(navController) }
+        composable(Screens.HadethScreen.route) { HadethScreen(navController) }
+        composable(Screens.SebhaScreen.route) { SebhaScreen(navController) }
+        composable(Screens.RadioScreen.route) { RadioScreen(navController) }
+        composable(Screens.TimeScreen.route) { TimeScreen(navController) }
+        composable(Screens.LanguageScreen.route) { LanguageScreen(navController) }
 
+        composable<Quran1> { backStackEntry ->
+            val quran: Quran1 = backStackEntry.toRoute()
+            SuratDetailScreen(
+                navController = navController,
+                verses = quran.verses,
+                id = quran.id,
+                type = quran.type,
+                description = quran.description,
+                translation = quran.translation,
+                surahName = quran.surah_name,
+                surahNameAr = quran.surah_name_ar,
+                totalVerses = quran.total_verses
+            )
+        }
     }
 }
+
 
 
 sealed class Screens(
@@ -105,9 +128,16 @@ sealed class Screens(
         "TimeScreen",
         Icon = R.drawable.time,
     )
-  object LanguageScreen : Screens(
+
+    object LanguageScreen : Screens(
         "LanguageScreen",
         "LanguageScreen",
+        Icon = R.drawable.time,
+    )
+
+    object SuratDetailScreen : Screens(
+        "SuratDetailScreen",
+        "SuratDetailScreen",
         Icon = R.drawable.time,
     )
 
@@ -187,6 +217,7 @@ fun NavEntry() {
         currentRoute.contains(Screens.SplashScreen.route) -> false
         currentRoute.contains(Screens.OnBoardingScreen.route) -> false
         currentRoute.contains(Screens.LanguageScreen.route) -> false
+        currentRoute.contains(Screens.SuratDetailScreen.route) -> false
 
 
         else -> true

@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -112,17 +113,69 @@ fun QuranScreen(navController: NavController) {
 
                 ResultState.Loading -> {
                     Column(modifier = Modifier.fillMaxSize()) {
+                        if (textField.isBlank()) {
+                            Text(
+                                text = "Most Recently",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 16.dp)
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            LazyHorizontalGrid(
+                                rows = GridCells.Fixed(1),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(170.dp),
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(5) {
+                                    ShimmerMostRecentCard()
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+                        }
+
+                        if (textField.isBlank()) {
+                            Text(
+                                text = "Suras List",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 16.dp)
+                            )
+                        }
+
+                        Column {
+                            repeat(8) { ShimmerSurahListItem() }
+                        }
+                    }
+                }
+
+                is ResultState.Succses -> {
+                    val allQuranData = (state as ResultState.Succses<List<Quran>>).response
+
+                    if (textField.isBlank()) {
                         Text(
                             text = "Most Recently",
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Start,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(start = 16.dp)
                         )
+
                         Spacer(modifier = Modifier.height(20.dp))
+
+                        val recentSurahs = allQuranData.take(5)
 
                         LazyHorizontalGrid(
                             rows = GridCells.Fixed(1),
@@ -132,80 +185,53 @@ fun QuranScreen(navController: NavController) {
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(5) {
-                                ShimmerMostRecentCard()
+                            items(recentSurahs.size) { index ->
+                                CardItemMostRecently(
+                                    surah = recentSurahs[index],
+                                    navController = navController
+                                )
                             }
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
+                    }
 
+                    if (textField.isBlank()) {
                         Text(
                             text = "Suras List",
                             color = Color.White,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Start,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(start = 16.dp)
                         )
-
-                        Column {
-                            repeat(8) {
-                                ShimmerSurahListItem()
-                            }
-                        }
-                    }
-                }
-
-                is ResultState.Succses -> {
-                    val allQuranData = (state as ResultState.Succses<List<Quran>>).response
-
-                    Text(
-                        text = "Most Recently",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    val recentSurahs = allQuranData.take(5)
-
-                    LazyHorizontalGrid(
-                        rows = GridCells.Fixed(1),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(170.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(recentSurahs.size) { index ->
-                            CardItemMostRecently(surah = recentSurahs[index])
-                        }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Text(
-                        text = "Suras List",
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 16.dp)
-                    )
+                    val filteredList = if (textField.isNotBlank()) {
+                        allQuranData.filter { surah ->
+                            surah.surah_name.contains(textField, ignoreCase = true) ||
+                                    surah.surah_name_ar.contains(textField)
+                        }
+                    } else {
+                        allQuranData
+                    }
 
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        allQuranData.forEachIndexed { index, surah ->
-                            SuratCartItem(surah = surah, index = index)
+                        filteredList.forEachIndexed { index, surah ->
+                            SuratCartItem(surah = surah, index = index, navController = navController)
                         }
+
+                        if (filteredList.isEmpty()) {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text(
+                                text = "No Surah found",
+                                color = Color.Gray,
+                                fontSize = 14.sp,
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            )
+                        }
+
                         Spacer(modifier = Modifier.height(100.dp))
                     }
                 }
@@ -213,6 +239,8 @@ fun QuranScreen(navController: NavController) {
         }
     }
 }
+
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -271,9 +299,9 @@ fun CustomStyledTextField(
 }
 
 @Composable
-fun CardItemMostRecently(surah: Quran) {
+fun CardItemMostRecently(surah: Quran,navController: NavController) {
     Card(
-        modifier = Modifier
+        modifier = Modifier.clickable{navController.navigate(Screens.SuratDetailScreen.route)}
             .size(width = 281.dp, height = 100.dp)
             .clip(RoundedCornerShape(10.dp)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE2BE7F)),
@@ -328,10 +356,25 @@ fun CardItemMostRecently(surah: Quran) {
 }
 
 @Composable
-fun SuratCartItem(surah: Quran, index: Int) {
+fun SuratCartItem(surah: Quran, index: Int, navController: NavController) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
+                .clickable {
+                    val versesList = surah.verses.values.map { it.content ?: "" }
+                    navController.navigate(
+                        Quran1(
+                            description = surah.description,
+                            id = surah.id,
+                            surah_name = surah.surah_name,
+                            surah_name_ar = surah.surah_name_ar,
+                            total_verses = surah.total_verses,
+                            translation = surah.translation,
+                            type = surah.type,
+                            verses = versesList
+                        )
+                    )
+                }
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -349,8 +392,7 @@ fun SuratCartItem(surah: Quran, index: Int) {
                     contentScale = ContentScale.Crop
                 )
                 Text(
-                    text =
-                        "${index + 1}",
+                    text = "${index + 1}",
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                     fontSize = 14.sp,
@@ -365,25 +407,26 @@ fun SuratCartItem(surah: Quran, index: Int) {
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
-                Text(text = "${surah.total_verses} Verses", color = Color.Gray, fontSize = 12.sp)
+                Text(
+                    text = "${surah.total_verses} Verses",
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
             }
             Text(
-                text =
-                    surah.surah_name_ar,
+                text = surah.surah_name_ar,
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
         }
         Divider(
-            color =
-                Color.White,
+            color = Color.White,
             thickness = 1.dp,
             modifier = Modifier.padding(start = 50.dp, end = 50.dp)
         )
     }
 }
-
 @Composable
 fun ShimmerMostRecentCard() {
     val brush = shimmerBrush()

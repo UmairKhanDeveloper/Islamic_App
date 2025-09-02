@@ -1,5 +1,6 @@
 package com.example.islamicapp.apiclient
 
+import com.example.islamicapp.screen.X1
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -11,5 +12,5 @@ data class Quran(
     val total_verses: Int,
     val translation: String,
     val type: String,
-    val verses: Verses
+    val verses: Map<String, X1>
 )
