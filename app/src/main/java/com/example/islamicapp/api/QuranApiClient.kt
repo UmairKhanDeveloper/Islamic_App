@@ -1,5 +1,6 @@
 package com.example.islamicapp.api
 
+import com.example.islamicapp.apiclient.Hadiths
 import com.example.islamicapp.apiclient.Quran
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -38,7 +39,7 @@ object QuranApiClient {
             level = LogLevel.ALL
             logger = object : Logger {
                 override fun log(message: String) {
-                    println("Ktor Log: $message")
+                    println("QuranApi Log: $message")
                 }
             }
         }
@@ -50,10 +51,10 @@ object QuranApiClient {
         }
 
         defaultRequest {
-            url(Constant.BASE_URL)
+            url(Constant.QURAN_BASE_URL)
             headers {
                 append("x-rapidapi-host", "al-quran1.p.rapidapi.com")
-                append("x-rapidapi-key", Constant.API_KEY)
+                append("x-rapidapi-key", Constant.QURAN_API_KEY)
             }
         }
     }
@@ -75,7 +76,43 @@ object QuranApiClient {
         }
         deferredList.mapNotNull { it.await() }
     }
-
 }
+
+
+object HadithApiClient {
+    @OptIn(ExperimentalSerializationApi::class)
+    val client = HttpClient(Android) {
+        install(ContentNegotiation) {
+            json(Json {
+                isLenient = true
+                ignoreUnknownKeys = true
+                explicitNulls = false
+                prettyPrint = true
+            })
+        }
+        install(Logging) {
+            level = LogLevel.ALL
+            logger = object : Logger {
+                override fun log(message: String) {
+                    println("HadithApi Log: $message")
+                }
+            }
+        }
+        install(HttpTimeout) {
+            socketTimeoutMillis = Constant.TIMEOUT
+            connectTimeoutMillis = Constant.TIMEOUT
+            requestTimeoutMillis = Constant.TIMEOUT
+        }
+
+        defaultRequest {
+            url(Constant.HADITH_BASE_URL)
+        }
+    }
+
+    suspend fun fetchHadiths(): Hadiths {
+        return client.get("hadiths/?apiKey=${Constant.HADITH_API_KEY}").body()
+    }
+}
+
 
 

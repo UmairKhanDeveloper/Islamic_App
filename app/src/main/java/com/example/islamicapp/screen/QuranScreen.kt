@@ -24,12 +24,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Card
 import androidx.compose.material.Icon
 import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.Text
@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,9 +51,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -62,14 +63,20 @@ import com.example.islamicapp.api.MainViewModel
 import com.example.islamicapp.api.Repository
 import com.example.islamicapp.api.ResultState
 import com.example.islamicapp.apiclient.Quran
+import com.example.islamicapp.db.MostRecently
+import com.example.islamicapp.db.MostRecentlyDataBase
 
 @Composable
 fun QuranScreen(navController: NavController) {
+    val context = LocalContext.current
+    val mostRecentlyDataBase = remember { MostRecentlyDataBase.getDataBase(context) }
+    val repository = remember { Repository(mostRecentlyDataBase) }
+    val viewModel = remember { MainViewModel(repository) }
+
     var textField by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
-    val repository = remember { Repository() }
-    val viewModel = remember { MainViewModel(repository) }
     val state by viewModel.allQuran.collectAsState()
+    val allMostRecently by viewModel.allMostRecently.observeAsState(initial = emptyList())
 
     LaunchedEffect(Unit) {
         viewModel.loadAllSurahs()
@@ -175,8 +182,6 @@ fun QuranScreen(navController: NavController) {
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        val recentSurahs = allQuranData.take(5)
-
                         LazyHorizontalGrid(
                             rows = GridCells.Fixed(1),
                             modifier = Modifier
@@ -185,10 +190,10 @@ fun QuranScreen(navController: NavController) {
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(recentSurahs.size) { index ->
+                            items(allMostRecently) { index ->
                                 CardItemMostRecently(
-                                    surah = recentSurahs[index],
-                                    navController = navController
+                                    mostRecently = index,
+                                    navController = navController,
                                 )
                             }
                         }
@@ -219,7 +224,12 @@ fun QuranScreen(navController: NavController) {
 
                     Column(modifier = Modifier.fillMaxWidth()) {
                         filteredList.forEachIndexed { index, surah ->
-                            SuratCartItem(surah = surah, index = index, navController = navController)
+                            SuratCartItem(
+                                surah = surah,
+                                index = index,
+                                navController = navController,
+                                viewModel = viewModel
+                            )
                         }
 
                         if (filteredList.isEmpty()) {
@@ -299,9 +309,10 @@ fun CustomStyledTextField(
 }
 
 @Composable
-fun CardItemMostRecently(surah: Quran,navController: NavController) {
+fun CardItemMostRecently(mostRecently: MostRecently, navController: NavController) {
     Card(
-        modifier = Modifier.clickable{navController.navigate(Screens.SuratDetailScreen.route)}
+        modifier = Modifier
+            .clickable { navController.navigate(Screens.SuratDetailScreen.route) }
             .size(width = 281.dp, height = 100.dp)
             .clip(RoundedCornerShape(10.dp)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE2BE7F)),
@@ -316,7 +327,7 @@ fun CardItemMostRecently(surah: Quran,navController: NavController) {
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Text(
-                    text = surah.surah_name,
+                    text = mostRecently.titleEng,
                     color = Color(0xFF202020),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -325,7 +336,7 @@ fun CardItemMostRecently(surah: Quran,navController: NavController) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = surah.surah_name_ar,
+                    text = mostRecently.titleArabic,
                     color = Color(0xFF202020),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
@@ -335,7 +346,7 @@ fun CardItemMostRecently(surah: Quran,navController: NavController) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text =
-                        "${surah.total_verses} Verses",
+                        "${mostRecently.total_verses} Verses",
                     color = Color(0xFF202020),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
@@ -356,76 +367,89 @@ fun CardItemMostRecently(surah: Quran,navController: NavController) {
 }
 
 @Composable
-fun SuratCartItem(surah: Quran, index: Int, navController: NavController) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .clickable {
-                    val versesList = surah.verses.values.map { it.content ?: "" }
-                    navController.navigate(
-                        Quran1(
-                            description = surah.description,
-                            id = surah.id,
-                            surah_name = surah.surah_name,
-                            surah_name_ar = surah.surah_name_ar,
-                            total_verses = surah.total_verses,
-                            translation = surah.translation,
-                            type = surah.type,
-                            verses = versesList
-                        )
+fun SuratCartItem(
+    surah: Quran,
+    index: Int,
+    navController: NavController,
+    viewModel: MainViewModel
+) {
+    Row(
+        modifier = Modifier
+            .clickable {
+                val versesList = surah.verses.values.map { it.content ?: "" }
+                navController.navigate(
+                    Quran1(
+                        description = surah.description,
+                        id = surah.id,
+                        surah_name = surah.surah_name,
+                        surah_name_ar = surah.surah_name_ar,
+                        total_verses = surah.total_verses,
+                        translation = surah.translation,
+                        type = surah.type,
+                        verses = versesList
                     )
-                }
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                )
+
+                viewModel.insertMostRecently(
+                    MostRecently(
+                        id = surah.id,
+                        titleEng = surah.surah_name,
+                        titleArabic = surah.surah_name_ar,
+                        image = "",
+                        total_verses = surah.total_verses.toString()
+                    )
+                )
+            }
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .background(Color.Transparent, shape = CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .background(Color.Transparent, shape = CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = com.example.islamicapp.R.drawable.star),
-                    contentDescription = null,
-                    modifier = Modifier.size(52.dp),
-                    contentScale = ContentScale.Crop
-                )
-                Text(
-                    text = "${index + 1}",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = surah.surah_name,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "${surah.total_verses} Verses",
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-            }
+            Image(
+                painter = painterResource(id = com.example.islamicapp.R.drawable.star),
+                contentDescription = null,
+                modifier = Modifier.size(52.dp),
+                contentScale = ContentScale.Crop
+            )
             Text(
-                text = surah.surah_name_ar,
+                text = "${index + 1}",
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                fontSize = 14.sp,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = surah.surah_name,
                 color = Color.White,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
+            Text(
+                text = "${surah.total_verses} Verses",
+                color = Color.Gray,
+                fontSize = 12.sp
+            )
         }
-        Divider(
+        Text(
+            text = surah.surah_name_ar,
             color = Color.White,
-            thickness = 1.dp,
-            modifier = Modifier.padding(start = 50.dp, end = 50.dp)
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold
         )
     }
+    Divider(
+        color = Color.White,
+        thickness = 1.dp,
+        modifier = Modifier.padding(start = 50.dp, end = 50.dp)
+    )
 }
 @Composable
 fun ShimmerMostRecentCard() {

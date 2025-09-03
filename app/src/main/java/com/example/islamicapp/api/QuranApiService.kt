@@ -1,7 +1,9 @@
 package com.example.islamicapp.api
 
+import com.example.islamicapp.apiclient.Hadiths
 import com.example.islamicapp.apiclient.Quran
 
-interface QuranApiService {
+interface ApiService {
     suspend fun fetchAllSurahs(): List<Quran>
+    suspend fun fetchHadiths(): Hadiths
 }
