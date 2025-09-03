@@ -152,7 +152,7 @@ fun SuratDetailScreen(
             contentScale = ContentScale.FillBounds,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(90.dp)
+                .height(60.dp)
         )
     }
 }

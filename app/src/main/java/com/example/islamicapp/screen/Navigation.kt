@@ -209,17 +209,14 @@ fun NavEntry() {
     val navController = rememberNavController()
     var showBottomNav by remember { mutableStateOf(true) }
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
+    val currentRoute = navBackStackEntry?.destination?.route ?: ""
 
     showBottomNav = when {
-        currentRoute == null -> true
+        currentRoute.isEmpty() -> true
         currentRoute.contains(Screens.SplashScreen.route) -> false
         currentRoute.contains(Screens.OnBoardingScreen.route) -> false
         currentRoute.contains(Screens.LanguageScreen.route) -> false
-        currentRoute.contains(Screens.SuratDetailScreen.route) -> false
-
-
+        currentRoute.contains(Quran1::class.java.simpleName) -> false
         else -> true
     }
 
@@ -233,4 +230,3 @@ fun NavEntry() {
         Navigation(navController)
     }
 }
-
