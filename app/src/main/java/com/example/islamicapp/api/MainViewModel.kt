@@ -65,4 +65,5 @@ class MainViewModel(private val repository: Repository) : ViewModel() {
             repository.delete(mostRecently)
         }
     }
+
 }

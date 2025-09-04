@@ -1,20 +1,23 @@
 package com.example.islamicapp.apiclient
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Data(
-    val book: Book,
-    val bookSlug: String,
-    val chapter: Chapter,
-    val chapterId: String,
-    val englishNarrator: String,
-    val hadithArabic: String,
-    val hadithEnglish: String,
-    val hadithNumber: String,
-    val hadithUrdu: String,
-    val headingArabic: String,
-    val headingEnglish: String,
-    val headingUrdu: String,
-    val id: Int,
-    val status: String,
-    val urduNarrator: String,
-    val volume: String
+    val book: Book? = null,
+    val bookSlug: String? = null,
+    val chapter: Chapter? = null,
+    val chapterId: String? = null,
+    val englishNarrator: String? = null,
+    val hadithArabic: String? = null,
+    val hadithEnglish: String? = null,
+    val hadithNumber: String? = null,
+    val hadithUrdu: String? = null,
+    val headingArabic: String? = null,
+    val headingEnglish: String? = null,
+    val headingUrdu: String? = null,
+    val id: Int? = null,
+    val status: String? = null,
+    val urduNarrator: String? = null,
+    val volume: String? = null
 )

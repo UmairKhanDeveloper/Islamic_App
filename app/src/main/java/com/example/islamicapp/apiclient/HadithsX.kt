@@ -1,17 +1,20 @@
 package com.example.islamicapp.apiclient
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class HadithsX(
-    val current_page: Int,
-    val `data`: List<Data>,
-    val first_page_url: String,
-    val from: Int,
-    val last_page: Int,
-    val last_page_url: String,
-    val links: List<Link>,
-    val next_page_url: String,
-    val path: String,
-    val per_page: Int,
-    val prev_page_url: Any,
-    val to: Int,
-    val total: Int
+    val current_page: Int? = null,
+    val `data`: List<Data>? = null,
+    val first_page_url: String? = null,
+    val from: Int? = null,
+    val last_page: Int? = null,
+    val last_page_url: String? = null,
+    val links: List<Link>? = null,
+    val next_page_url: String? = null,
+    val path: String? = null,
+    val per_page: Int? = null,
+    val prev_page_url: String? = null,
+    val to: Int? = null,
+    val total: Int? = null
 )

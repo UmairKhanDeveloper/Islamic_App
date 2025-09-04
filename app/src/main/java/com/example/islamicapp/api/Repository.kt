@@ -31,4 +31,5 @@ class Repository(private val mostRecentlyDataBase: MostRecentlyDataBase) : ApiSe
     suspend fun delete(mostRecently: MostRecently) {
         mostRecentlyDataBase.getDao().delete(mostRecently)
     }
+
 }

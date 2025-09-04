@@ -1,10 +1,13 @@
 package com.example.islamicapp.apiclient
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Book(
-    val aboutWriter: Any,
-    val bookName: String,
-    val bookSlug: String,
-    val id: Int,
-    val writerDeath: String,
-    val writerName: String
+    val aboutWriter: String? = null,
+    val bookName: String? = null,
+    val bookSlug: String? = null,
+    val id: Int? = null,
+    val writerDeath: String? = null,
+    val writerName: String? = null
 )
