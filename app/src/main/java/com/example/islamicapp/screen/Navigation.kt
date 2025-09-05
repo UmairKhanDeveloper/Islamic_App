@@ -25,8 +25,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.islamicapp.R
+import com.example.islamicapp.apiclient.HadithsX
 import kotlinx.serialization.Serializable
-
 
 
 @Serializable
@@ -48,6 +48,22 @@ data class Quran1(
     val description: String,
     val verses: List<String>
 )
+
+
+@Serializable
+data class HadithDetailNavArg(
+    val id: Int? = null,
+    val hadithNumber: String? = null,
+    val englishNarrator: String? = null,
+    val hadithEnglish: String? = null,
+    val hadithUrdu: String? = null,
+    val urduNarrator: String? = null,
+    val hadithArabic: String? = null,
+    val headingArabic: String? = null,
+    val headingUrdu: String? = null,
+    val headingEnglish: String? = null
+)
+
 
 @Composable
 fun Navigation(navController: NavHostController) {
@@ -76,9 +92,31 @@ fun Navigation(navController: NavHostController) {
                 totalVerses = quran.total_verses
             )
         }
-    }
-}
+        composable<HadithDetailNavArg> { backStackEntry ->
+            val hadith: HadithDetailNavArg = backStackEntry.toRoute()
+            HadethDetailScreen(
+                navController = navController,
+                hadith.id,
+                hadith.hadithNumber,
+                hadith.englishNarrator,
+                hadith.hadithEnglish,
+                hadith.hadithUrdu,
+                hadith.urduNarrator,
+                hadith.hadithArabic,
+                hadith.headingArabic,
+                hadith.headingUrdu,
+                hadith.headingEnglish,
 
+                )
+        }
+
+
+        composable(Screens.MorningAzkar.route) { MorningAzkar(navController) }
+        composable(Screens.EveningAzkar.route) { EveningAzkar(navController) }
+
+    }
+
+}
 
 
 sealed class Screens(
@@ -138,6 +176,16 @@ sealed class Screens(
     object SuratDetailScreen : Screens(
         "SuratDetailScreen",
         "SuratDetailScreen",
+        Icon = R.drawable.time,
+    )
+    object MorningAzkar : Screens(
+        "MorningAzkar",
+        "MorningAzkar",
+        Icon = R.drawable.time,
+    )
+    object EveningAzkar : Screens(
+        "EveningAzkar",
+        "EveningAzkar",
         Icon = R.drawable.time,
     )
 
@@ -216,7 +264,10 @@ fun NavEntry() {
         currentRoute.contains(Screens.SplashScreen.route) -> false
         currentRoute.contains(Screens.OnBoardingScreen.route) -> false
         currentRoute.contains(Screens.LanguageScreen.route) -> false
+        currentRoute.contains(Screens.MorningAzkar.route) -> false
+        currentRoute.contains(Screens.EveningAzkar.route) -> false
         currentRoute.contains(Quran1::class.java.simpleName) -> false
+        currentRoute.contains(HadithDetailNavArg::class.java.simpleName) -> false
         else -> true
     }
 

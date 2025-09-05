@@ -1,5 +1,6 @@
 package com.example.islamicapp.api
 
+import com.example.islamicapp.apiclient.Audio
 import com.example.islamicapp.apiclient.Hadiths
 import com.example.islamicapp.apiclient.Quran
 import io.ktor.client.HttpClient
@@ -80,16 +81,20 @@ object QuranApiClient {
 
 
 object HadithApiClient {
+
     @OptIn(ExperimentalSerializationApi::class)
     val client = HttpClient(Android) {
         install(ContentNegotiation) {
-            json(Json {
-                isLenient = true
-                ignoreUnknownKeys = true
-                explicitNulls = false
-                prettyPrint = true
-            })
+            json(
+                Json {
+                    isLenient = true
+                    ignoreUnknownKeys = true
+                    explicitNulls = false
+                    prettyPrint = true
+                }
+            )
         }
+
         install(Logging) {
             level = LogLevel.ALL
             logger = object : Logger {
@@ -98,21 +103,23 @@ object HadithApiClient {
                 }
             }
         }
+
         install(HttpTimeout) {
             socketTimeoutMillis = Constant.TIMEOUT
             connectTimeoutMillis = Constant.TIMEOUT
             requestTimeoutMillis = Constant.TIMEOUT
         }
-
-        defaultRequest {
-            url(Constant.HADITH_BASE_URL)
-        }
     }
 
     suspend fun fetchHadiths(): Hadiths {
-        return client.get("hadiths/?apiKey=${Constant.HADITH_API_KEY}").body()
+        return client.get("${Constant.HADITH_BASE_URL}hadiths/?apiKey=${Constant.HADITH_API_KEY}")
+            .body()
+    }
+
+    suspend fun fetchSurahAudio(surahId: Int): Audio {
+        val url = "${Constant.AUDIO_BASE_URL}audio/$surahId.json"
+        return client.get(url).body()
     }
 }
-
 
 

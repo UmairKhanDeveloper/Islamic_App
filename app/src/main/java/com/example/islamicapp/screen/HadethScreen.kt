@@ -1,10 +1,14 @@
 package com.example.islamicapp.screen
 
-import android.os.Build
-import androidx.annotation.RequiresApi
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,17 +21,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.Card
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material3.Card
@@ -36,31 +34,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.islamicapp.api.MainViewModel
 import com.example.islamicapp.api.Repository
 import com.example.islamicapp.api.ResultState
+import com.example.islamicapp.apiclient.Data
 import com.example.islamicapp.apiclient.Hadiths
 import com.example.islamicapp.db.MostRecentlyDataBase
-import io.ktor.client.content.LocalFileContent
-import java.time.format.TextStyle
 
 
 @Composable
@@ -73,26 +70,25 @@ fun HadethScreen(navController: NavController) {
 
     val state by viewModel.allHadiths.collectAsState()
     var allHadith by remember { mutableStateOf<Hadiths?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorText by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         viewModel.loadAllHadiths()
     }
 
-    when (val s = state) {
-        is ResultState.Error -> {
-            isLoading = false
-            errorText = s.error?.message ?: s.error.toString()
-        }
-        ResultState.Loading -> {
-            isLoading = true
-            errorText = null
-        }
-        is ResultState.Succses<*> -> {
-            isLoading = false
-            errorText = null
-            allHadith = s.response as? Hadiths
+    val isLoading = state is ResultState.Loading
+    val errorText = (state as? ResultState.Error)?.error?.message
+
+    val filteredList: List<Data> = remember(textField, allHadith) {
+        allHadith?.hadiths?.data?.filter { hadith ->
+            textField.isBlank() ||
+                    hadith.hadithEnglish?.contains(textField, ignoreCase = true) == true ||
+                    hadith.englishNarrator?.contains(textField, ignoreCase = true) == true
+        } ?: emptyList()
+    }
+
+    LaunchedEffect(state) {
+        if (state is ResultState.Succses<*>) {
+            allHadith = (state as ResultState.Succses<Hadiths>).response
         }
     }
 
@@ -107,98 +103,47 @@ fun HadethScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(vertical = 30.dp),
+                .padding(vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
                 painter = painterResource(id = com.example.islamicapp.R.drawable.masjid),
                 contentDescription = null,
-                modifier = Modifier.size(210.dp),
+                modifier = Modifier.size(180.dp),
                 contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                CustomStyledTextFieldHadeth(
-                    value = textField,
-                    onValueChange = { textField = it }
-                )
-            }
+            CustomStyledTextFieldHadeth(
+                value = textField,
+                onValueChange = { textField = it }
+            )
 
-            Spacer(modifier = Modifier.height(25.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            when {
-                isLoading -> {
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(400.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp)
-                    ) {
-                        items(3) {
-                            ShimmerHadithCard()
-                        }
+            errorText?.let { Text(it, color = Color.Red) }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                if (isLoading) {
+                    items(6) {
+                        ShimmerHadithCard()
                     }
-                }
-                errorText != null -> {
-                    Text(text = errorText ?: "", color = Color.White)
-                }
-                else -> {
-                    val all = allHadith?.hadiths?.data ?: emptyList()
-                    val query = textField.trim()
-                    val filteredList = if (query.isEmpty()) {
-                        all
-                    } else {
-                        all.filter { h ->
-                            (h.hadithEnglish ?: "").contains(query, ignoreCase = true) ||
-                                    (h.englishNarrator ?: "").contains(query, ignoreCase = true) ||
-                                    (h.hadithUrdu ?: "").contains(query, ignoreCase = true) ||
-                                    (h.hadithArabic ?: "").contains(query, ignoreCase = true)
-                        }
-                    }
-
-                    if (filteredList.isEmpty()) {
-                        Text("Hadith is not found", color = Color.White)
-                    } else {
-                        LazyHorizontalGrid(
-                            rows = GridCells.Fixed(1),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(400.dp)
-                                .padding(bottom = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp)
-                        ) {
-                            items(filteredList) { hadith ->
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    val title = "حدیث #${hadith.hadithNumber ?: "-"}"
-                                    val book = hadith.bookSlug ?: "نامعلوم"
-                                    val writer = hadith.book?.writerName ?: "نامعلوم"
-
-                                    val content = hadith.hadithUrdu
-                                        ?: hadith.hadithEnglish
-                                        ?: hadith.hadithArabic
-                                        ?: "متن دستیاب نہیں"
-
-                                    HadithCard(
-                                        title = title,
-                                        content = content,
-                                        book = book,
-                                        writer = writer
-                                    )
-                                }
-                            }
-                        }
+                } else {
+                    items(filteredList) { hadith ->
+                        HadithCard(hadith = hadith,navController)
                     }
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun CustomStyledTextFieldHadeth(
@@ -255,158 +200,127 @@ fun CustomStyledTextFieldHadeth(
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun HadithCard(
-    title: String,
-    content: String,
-    book: String,
-    writer: String
-) {
+fun HadithCard(hadith: Data,navController: NavController) {
     Card(
         modifier = Modifier
-            .width(300.dp)
-            .wrapContentHeight()
-            .clip(RoundedCornerShape(10.dp)),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFE2BE7F)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Image(
-                    painter = painterResource(id = com.example.islamicapp.R.drawable.cornerr1),
-                    contentDescription = null,
-                    modifier = Modifier.size(60.dp),
-                    contentScale = ContentScale.Fit
+            .fillMaxWidth()
+            .clickable {
+                navController.navigate(
+                    HadithDetailNavArg(
+                        hadith.id,
+                        hadith.hadithNumber,
+                        hadith.englishNarrator,
+                        hadith.hadithEnglish,
+                        hadith.hadithUrdu,
+                        hadith.urduNarrator,
+                        hadith.hadithArabic,
+                        hadith.headingArabic,
+                        hadith.headingUrdu,
+                        hadith.headingEnglish,
+                    )
                 )
-                Image(
-                    painter = painterResource(id = com.example.islamicapp.R.drawable.cornerr2),
-                    contentDescription = null,
-                    modifier = Modifier.size(60.dp),
-                    contentScale = ContentScale.Fit
+            },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE2BE7F)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFF8E8C2)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = hadith.hadithNumber ?: "",
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontSize = 16.sp
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = com.example.islamicapp.R.drawable.hadithcardbackground),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
+            Column(modifier = Modifier.weight(1f)) {
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                hadith.book?.writerName?.let { writer ->
                     Text(
-                        text = title,
-                        style = androidx.compose.ui.text.TextStyle(
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        ),
-                        textAlign = TextAlign.Center
+                        text = writer,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color(0xFF202020)
                     )
+                }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = " $book",
-                            style = androidx.compose.ui.text.TextStyle(
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFF444444)
-                            )
-                        )
+                Spacer(modifier = Modifier.height(4.dp))
 
-                        Text(
-                            text = "$writer",
-                            style = androidx.compose.ui.text.TextStyle(
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color(0xFF444444)
-                            )
-                        )
-
-
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
+                hadith.englishNarrator?.let { narrator ->
                     Text(
-                        text = content,
-                        style = androidx.compose.ui.text.TextStyle(
-                            fontSize = 16.sp,
-                            color = Color.Black,
-                            textAlign = TextAlign.Center
-                        )
+                        text = narrator,
+                        fontSize = 13.sp,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                hadith.hadithEnglish?.let { hadithText ->
+                    Text(
+                        text = hadithText,
+                        fontSize = 14.sp,
+                        color = Color(0xFF202020),
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Image(
-                painter = painterResource(id = com.example.islamicapp.R.drawable.mosque),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp),
-                contentScale = ContentScale.FillBounds
-            )
         }
     }
 }
+
 @Composable
 fun ShimmerHadithCard() {
-    val brush = shimmerBrush()
-
-    Card(
+    val brush = shimmerBrush1()
+    Spacer(
         modifier = Modifier
-            .width(300.dp)
-            .wrapContentHeight()
-            .clip(RoundedCornerShape(10.dp)),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        )
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(brush)
-                .padding(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(180.dp))
-                Spacer(modifier = Modifier.height(12.dp))
-                Spacer(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.Transparent)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-    }
+            .fillMaxWidth()
+            .height(150.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(brush)
+            .padding(16.dp)
+    )
+}
+
+@Composable
+fun shimmerBrush1(): Brush {
+    val shimmerColors = listOf(
+        Color.LightGray.copy(alpha = 0.6f),
+        Color.White.copy(alpha = 0.3f),
+        Color.LightGray.copy(alpha = 0.6f)
+    )
+
+    val transition = rememberInfiniteTransition()
+    val translateAnim = transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing)
+        ),
+        label = "shimmer"
+    )
+
+    return Brush.linearGradient(
+        colors = shimmerColors,
+        start = Offset(translateAnim.value - 1000f, 0f),
+        end = Offset(translateAnim.value, 0f)
+    )
 }

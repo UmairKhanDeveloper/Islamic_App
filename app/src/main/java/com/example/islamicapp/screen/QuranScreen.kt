@@ -1,5 +1,6 @@
 package com.example.islamicapp.screen
 
+
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.animateFloat
@@ -42,7 +43,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,7 +83,7 @@ fun QuranScreen(navController: NavController) {
 
 
     LaunchedEffect(Unit) {
-            viewModel.loadAllSurahs()
+        viewModel.loadAllSurahs()
 
 
     }
@@ -196,13 +196,17 @@ fun QuranScreen(navController: NavController) {
                                 .height(170.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(allMostRecently) { index ->
+                        ) { items(allMostRecently) { mostRecently ->
+                            val surah = allQuranData.find { it.id == mostRecently.id }
+                            if (surah != null) {
                                 CardItemMostRecently(
-                                    mostRecently = index,
+                                    mostRecently = mostRecently,
                                     navController = navController,
+                                    viewModel = viewModel,
+                                    surah = surah
                                 )
                             }
+                        }
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
@@ -316,10 +320,30 @@ fun CustomStyledTextField(
 }
 
 @Composable
-fun CardItemMostRecently(mostRecently: MostRecently, navController: NavController) {
+fun CardItemMostRecently(
+    mostRecently: MostRecently,
+    navController: NavController,
+    viewModel: MainViewModel,
+    surah: Quran // Pass the full Quran object to get verses and details
+) {
     Card(
         modifier = Modifier
-            .clickable { navController.navigate(Screens.SuratDetailScreen.route) }
+            .clickable {
+                val versesList = surah.verses.values.map { it.content ?: "" }
+
+                navController.navigate(
+                    Quran1(
+                        description = surah.description,
+                        id = surah.id,
+                        surah_name = surah.surah_name,
+                        surah_name_ar = surah.surah_name_ar,
+                        total_verses = surah.total_verses,
+                        translation = surah.translation,
+                        type = surah.type,
+                        verses = versesList
+                    )
+                )
+            }
             .size(width = 281.dp, height = 100.dp)
             .clip(RoundedCornerShape(10.dp)),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFE2BE7F)),
@@ -352,8 +376,7 @@ fun CardItemMostRecently(mostRecently: MostRecently, navController: NavControlle
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text =
-                        "${mostRecently.total_verses} Verses",
+                    text = "${mostRecently.total_verses} Verses",
                     color = Color(0xFF202020),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium
@@ -361,8 +384,7 @@ fun CardItemMostRecently(mostRecently: MostRecently, navController: NavControlle
             }
             Spacer(modifier = Modifier.width(12.dp))
             Image(
-                painter =
-                    painterResource(id = com.example.islamicapp.R.drawable.rectengle),
+                painter = painterResource(id = com.example.islamicapp.R.drawable.rectengle),
                 contentDescription = "Sura Image",
                 modifier = Modifier
                     .size(width = 120.dp, height = 130.dp)

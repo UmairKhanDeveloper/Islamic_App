@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -84,7 +85,6 @@ fun SuratDetailScreen(
         }
 
         Spacer(modifier = Modifier.height(20.dp))
-
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -114,12 +114,36 @@ fun SuratDetailScreen(
         }
 
         Spacer(modifier = Modifier.height(20.dp))
-
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
                 .padding(vertical = 8.dp)
         ) {
+            if (id != 9) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .border(
+                                width = 1.dp,
+                                color = Color(0xFFE2BE7F),
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .background(Color.Transparent, shape = RoundedCornerShape(14.dp))
+                            .padding(vertical = 12.dp, horizontal = 16.dp)
+                    ) {
+                        Text(
+                            text = "بسم الله الرحمن الرحيم",
+                            fontSize = 22.sp,
+                            color = Color(0xFFE2BE7F),
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+
             itemsIndexed(verses) { index, verse ->
                 if (verse.isNotBlank()) {
                     Box(
@@ -134,13 +158,39 @@ fun SuratDetailScreen(
                             .background(Color.Transparent, shape = RoundedCornerShape(14.dp))
                             .padding(vertical = 12.dp, horizontal = 16.dp)
                     ) {
-                        Text(
-                            text = "[${index + 1}] $verse",
-                            fontSize = 18.sp,
-                            color = Color(0xFFE2BE7F),
-                            textAlign = TextAlign.Center,
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.End,
                             modifier = Modifier.fillMaxWidth()
-                        )
+                        ) {
+                            Text(
+                                text = verse,
+                                fontSize = 18.sp,
+                                color = Color(0xFFE2BE7F),
+                                textAlign = TextAlign.Right,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            Spacer(modifier = Modifier.width(8.dp))
+
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .background(
+                                        color = Color(0xFFE2BE7F),
+                                        shape = CircleShape
+                                    )
+                            ) {
+                                Text(
+                                    text = "${index + 1}",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF121212),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
                     }
                 }
             }

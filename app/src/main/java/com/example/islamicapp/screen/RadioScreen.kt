@@ -1,5 +1,7 @@
 package com.example.islamicapp.screen
 
+
+import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,32 +26,55 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.navigation.NavController
+import com.example.islamicapp.R
+import com.example.islamicapp.api.MainViewModel
+import com.example.islamicapp.api.Repository
+import com.example.islamicapp.api.ResultState
+import com.example.islamicapp.apiclient.Audio
+import com.example.islamicapp.db.MostRecentlyDataBase
 
 @Composable
 fun RadioScreen(navController: NavController) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    val mostRecentlyDataBase = remember { MostRecentlyDataBase.getDataBase(context) }
+    val repository = remember { Repository(mostRecentlyDataBase) }
+    val viewModel = remember { MainViewModel(repository) }
+    var allAudio by remember { mutableStateOf<Audio?>(null) }
+
+    val state by viewModel.surahAudio.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadSurahAudio(2) // Surah 2 audio
+    }
+    var isLoading by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
         Image(
-            painter = painterResource(id = com.example.islamicapp.R.drawable.background6),
+            painter = painterResource(id = R.drawable.background6),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
@@ -68,63 +93,72 @@ fun RadioScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                painter = painterResource(id = com.example.islamicapp.R.drawable.masjid),
+                painter = painterResource(id = R.drawable.masjid),
                 contentDescription = null,
                 modifier = Modifier.size(150.dp),
                 contentScale = ContentScale.Fit
             )
 
             Spacer(modifier = Modifier.height(16.dp))
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFFd4b174))
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                TabButton("Radio", selected = selectedTab == 0) { selectedTab = 0 }
-                TabButton("Reciters", selected = selectedTab == 1) { selectedTab = 1 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
-            if (selectedTab == 0) {
-                ReciterCard("Radio Ibrahim Al-Akdar")
-            }
-            if (selectedTab == 1) {
-                ReciterCard("Radio Ibrahim Al-Akdar")
-                ReciterCard("Radio Al-Qaria Yassen", isPlaying = true)
-                ReciterCard("Radio Ahmed Al-trabulsi")
+            when (state) {
+                is ResultState.Error -> {
+                    isLoading = false
+                    val error = (state as ResultState.Error).error
+                    Text(text = "$error", color = Color.Red)
+                }
+
+                ResultState.Loading -> {
+                    isLoading = true
+                    Text("Loading...", color = Color.White)
+                }
+
+                is ResultState.Succses<*> -> {
+                    isLoading = false
+                    val success = (state as ResultState.Succses).response
+                    allAudio = success
+
+                    allAudio?.toList()?.forEach { reciter ->
+                        ReciterCard(
+                            name = reciter.reciter,
+                            url = reciter.url,
+                            context = context
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun TabButton(text: String, selected: Boolean, onClick: () -> Unit) {
-    val bgColor = if (selected) Color(0xFFf5e3c3) else Color.Transparent
-    val textColor = if (selected) Color.Black else Color.White
+fun ReciterCard(
+    name: String,
+    url: String,
+    context: Context,
+) {
+    var isPlaying by remember { mutableStateOf(false) }
+    val exoPlayer = rememberExoPlayer(context, url)
 
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(15.dp))
-            .background(bgColor)
-            .clickable { onClick() }
-            .padding(horizontal = 24.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = text, color = textColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    var currentPosition by remember { mutableStateOf(0L) }
+    var duration by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(exoPlayer, isPlaying) {
+        while (true) {
+            if (isPlaying) {
+                currentPosition = exoPlayer.currentPosition
+                duration = exoPlayer.duration.coerceAtLeast(0L)
+            }
+            kotlinx.coroutines.delay(500)
+        }
     }
-}
 
-@Composable
-fun ReciterCard(name: String, isPlaying: Boolean = false) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         shape = RoundedCornerShape(20.dp),
-        colors =
-            CardDefaults.cardColors(containerColor = Color(0xFFd4b174)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFd4b174)),
         elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Column(
@@ -133,19 +167,117 @@ fun ReciterCard(name: String, isPlaying: Boolean = false) {
         ) {
             Text(name, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
 
+            if (isPlaying && duration > 0) {
+                Column {
+                    Slider(
+                        value = currentPosition.toFloat() / duration,
+                        onValueChange = { value ->
+                            val newPosition = (value * duration).toLong()
+                            exoPlayer.seekTo(newPosition)
+                            currentPosition = newPosition
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(formatTime(currentPosition), fontSize = 12.sp, color = Color.Black)
+                        Text(formatTime(duration), fontSize = 12.sp, color = Color.Black)
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.FavoriteBorder, contentDescription = null, tint = Color.Black, modifier = Modifier.size(28.dp))
-                if (isPlaying) {
-                    Icon(Icons.Default.PauseCircleFilled, contentDescription = null, tint = Color.Black, modifier = Modifier.size(36.dp))
-                } else {
-                    Icon(Icons.Default.PlayCircleFilled, contentDescription = null, tint = Color.Black, modifier = Modifier.size(36.dp))
-                }
-                Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Color.Black, modifier = Modifier.size(28.dp))
+                Icon(
+                    Icons.Default.FavoriteBorder,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(28.dp)
+                )
+
+                Icon(
+                    painter = painterResource(id = R.drawable.sebha),
+                    contentDescription = "Rewind",
+                    tint = Color.Black,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clickable {
+                            val newPosition = (exoPlayer.currentPosition - 10000).coerceAtLeast(0)
+                            exoPlayer.seekTo(newPosition)
+                            currentPosition = newPosition
+                        }
+                )
+
+                Icon(
+                    if (isPlaying) Icons.Default.PauseCircleFilled else Icons.Default.PlayCircleFilled,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable {
+                            if (isPlaying) {
+                                exoPlayer.pause()
+                            } else {
+                                exoPlayer.play()
+                            }
+                            isPlaying = !isPlaying
+                        }
+                )
+
+                Icon(
+                    painter = painterResource(id = R.drawable.sebha),
+                    contentDescription = "Forward",
+                    tint = Color.Black,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clickable {
+                            val newPosition = (exoPlayer.currentPosition + 10000)
+                                .coerceAtMost(duration)
+                            exoPlayer.seekTo(newPosition)
+                            currentPosition = newPosition
+                        }
+                )
+
+                Icon(
+                    Icons.Default.VolumeUp,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(28.dp)
+                )
             }
         }
     }
+}
+
+
+@Composable
+fun rememberExoPlayer(context: Context, url: String): ExoPlayer {
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            setMediaItem(MediaItem.fromUri(url))
+            prepare()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    return exoPlayer
+}
+
+
+fun formatTime(ms: Long): String {
+    val totalSeconds = ms / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
 }

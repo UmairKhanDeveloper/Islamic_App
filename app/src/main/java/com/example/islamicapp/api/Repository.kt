@@ -1,6 +1,7 @@
 package com.example.islamicapp.api
 
 import androidx.lifecycle.LiveData
+import com.example.islamicapp.apiclient.Audio
 import com.example.islamicapp.apiclient.Hadiths
 import com.example.islamicapp.apiclient.Quran
 import com.example.islamicapp.db.MostRecently
@@ -17,6 +18,10 @@ class Repository(private val mostRecentlyDataBase: MostRecentlyDataBase) : ApiSe
         return HadithApiClient.fetchHadiths()
     }
 
+    override suspend fun fetchSurahAudio(surahId: Int): Audio {
+        return HadithApiClient.fetchSurahAudio(surahId)
+    }
+
     fun getAllMostRecently(): LiveData<List<MostRecently>> =
         mostRecentlyDataBase.getDao().getAllMostRecently()
 
@@ -31,5 +36,4 @@ class Repository(private val mostRecentlyDataBase: MostRecentlyDataBase) : ApiSe
     suspend fun delete(mostRecently: MostRecently) {
         mostRecentlyDataBase.getDao().delete(mostRecently)
     }
-
 }

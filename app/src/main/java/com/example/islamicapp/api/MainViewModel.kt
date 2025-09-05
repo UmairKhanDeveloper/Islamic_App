@@ -3,6 +3,7 @@ package com.example.islamicapp.api
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.islamicapp.apiclient.Audio
 import com.example.islamicapp.apiclient.Hadiths
 import com.example.islamicapp.apiclient.Quran
 import com.example.islamicapp.db.MostRecently
@@ -21,6 +22,9 @@ class MainViewModel(private val repository: Repository) : ViewModel() {
 
     private val _allHadiths = MutableStateFlow<ResultState<Hadiths>>(ResultState.Loading)
     val allHadiths: StateFlow<ResultState<Hadiths>> = _allHadiths.asStateFlow()
+
+    private val _surahAudio = MutableStateFlow<ResultState<Audio>>(ResultState.Loading)
+    val surahAudio: StateFlow<ResultState<Audio>> = _surahAudio.asStateFlow()
 
     val allMostRecently: LiveData<List<MostRecently>> = repository.getAllMostRecently()
 
@@ -48,6 +52,19 @@ class MainViewModel(private val repository: Repository) : ViewModel() {
         }
     }
 
+    // 🔥 New Function for Surah Audio
+    fun loadSurahAudio(surahId: Int) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _surahAudio.value = ResultState.Loading
+            try {
+                val response = repository.fetchSurahAudio(surahId)
+                _surahAudio.value = ResultState.Succses(response)
+            } catch (e: Exception) {
+                _surahAudio.value = ResultState.Error(e)
+            }
+        }
+    }
+
     fun insertMostRecently(mostRecently: MostRecently) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.insert(mostRecently)
@@ -65,5 +82,4 @@ class MainViewModel(private val repository: Repository) : ViewModel() {
             repository.delete(mostRecently)
         }
     }
-
 }
