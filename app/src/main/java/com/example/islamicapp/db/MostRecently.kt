@@ -17,4 +17,3 @@ data class MostRecently(
     @ColumnInfo("total_verses")
     val total_verses: String
 )
-

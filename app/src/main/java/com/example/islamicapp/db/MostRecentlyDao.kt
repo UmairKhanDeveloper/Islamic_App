@@ -1,3 +1,4 @@
+
 package com.example.islamicapp.db
 
 import androidx.lifecycle.LiveData

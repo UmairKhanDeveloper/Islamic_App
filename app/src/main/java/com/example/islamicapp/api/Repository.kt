@@ -8,6 +8,8 @@ import com.example.islamicapp.db.MostRecently
 import com.example.islamicapp.db.MostRecentlyDataBase
 
 
+
+
 class Repository(private val mostRecentlyDataBase: MostRecentlyDataBase) : ApiService {
 
     override suspend fun fetchAllSurahs(): List<Quran> {

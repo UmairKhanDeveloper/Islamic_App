@@ -103,7 +103,7 @@ fun HadethScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 20.dp),
+                .padding(vertical = 20.dp).padding(bottom = 80.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
